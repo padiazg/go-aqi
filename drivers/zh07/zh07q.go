@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/padiazg/go-aqi/domain"
-	"github.com/padiazg/go-aqi/transport/serial"
+	"github.com/padiazg/go-aqi/internal/transport/serial"
 )
 
 var _ domain.SensorProvider = (*ZH07q)(nil)

@@ -8,8 +8,8 @@ import (
 
 	i2c "github.com/d2r2/go-i2c"
 	"github.com/padiazg/go-aqi/domain"
-	"github.com/padiazg/go-aqi/pkg/helpers"
-	i2ctransport "github.com/padiazg/go-aqi/transport/i2c"
+	"github.com/padiazg/go-aqi/internal/helpers"
+	i2ctransport "github.com/padiazg/go-aqi/internal/transport/i2c"
 )
 
 var _ domain.SensorProvider = (*SPS30)(nil)
