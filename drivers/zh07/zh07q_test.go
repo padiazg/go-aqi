@@ -1,10 +1,15 @@
 package zh07
 
 import (
-	"bufio"
-	"bytes"
+	"context"
 	"fmt"
+	"sync"
 	"testing"
+	"time"
+
+	"github.com/go-openapi/testify/v2/assert"
+	"github.com/padiazg/go-aqi/domain"
+	"github.com/stretchr/testify/mock"
 )
 
 var (
@@ -26,70 +31,361 @@ var (
 	}
 )
 
-func TestZH07q_Read(t *testing.T) {
-	var (
-		tests = []struct {
-			name     string
-			response []byte
-			checks   []checkFn
-			before   func(z *ZH07q)
-		}{
-			{
-				name:     "success",
-				response: sampleQAPayload,
-				checks: check(
-					checkError(false),
-					pm(0x85, 0x96, 0x65),
-				),
-			},
-			{
-				name:     "fail-checksum-mismatch",
-				response: sampleQABadChecksum,
-				checks: check(
-					checkError(true),
-				),
-			},
-			{
-				name: "fail-sendcommand",
-				before: func(z *ZH07q) {
-					z.writeAndRead = func(_ *bufio.ReadWriter, _ []byte) ([]byte, error) {
-						return nil, fmt.Errorf("test error from sendCommand")
-					}
-				},
-				checks: check(
-					checkError(true),
-				),
-			},
-		}
-	)
+func TestZH07q_getChecksum(t *testing.T) {
+	var z *ZH07q = &ZH07q{data: sampleQAPayload}
+	if cs := z.getChecksum(); cs != 0xFA {
+		t.Errorf("TestGetChecksumQA, got %d, expected %d", cs, checksum)
+	}
+}
+
+type newZH07qFn func(*testing.T, *ZH07q)
+
+var checknewZH07q = func(fns ...newZH07qFn) []newZH07qFn { return fns }
+
+func checkTypeZH07q(t *testing.T, sp *ZH07q) {
+	if assert.NotNil(t, sp) {
+		assert.IsType(t, &ZH07q{}, sp)
+	}
+}
+
+func checkConfigZH07q(t *testing.T, sp *ZH07q) {
+	assert.NotNil(t, sp.transport)
+	assert.NotNil(t, sp.interval)
+	if assert.NotNil(t, sp.data) {
+		assert.Equal(t, 9, len(sp.data))
+	}
+}
+
+func Test_newZH07q(t *testing.T) {
+	tests := []struct {
+		name   string
+		config *Config
+		checks []newZH07qFn
+	}{
+		{
+			name: "success",
+			checks: checknewZH07q(
+				checkTypeZH07q,
+				checkConfigZH07q,
+			),
+		},
+	}
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			var (
-				b = &bytes.Buffer{}
-				z = NewZH07q(&Config{
-					RW: bufio.NewReadWriter(bufio.NewReader(b), bufio.NewWriter(b)),
-				})
-				got *Reading
-				err error
-			)
-
-			if tt.before != nil {
-				tt.before(z)
-			}
-
-			go dummyCommandResponder(t, z.rw, commandQuery, tt.response)
-
-			got, err = z.Read()
+			r := newZH07q(tt.config)
 			for _, c := range tt.checks {
-				c(t, got, err)
+				c(t, r)
 			}
 		})
 	}
 }
 
-func TestZH07q_getChecksum(t *testing.T) {
-	var z *ZH07q = &ZH07q{data: sampleQAPayload}
-	if cs := z.getChecksum(); cs != 0xFA {
-		t.Errorf("TestGetChecksumQA, got %d, expected %d", cs, checksum)
+type checkZH07qInitFn func(*testing.T, error)
+
+var checkZH07qInit = func(fns ...checkZH07qInitFn) []checkZH07qInitFn { return fns }
+
+func checkZH07qInitError(want string) checkZH07qInitFn {
+	return func(t *testing.T, err error) {
+		t.Helper()
+		if want == "" {
+			assert.NoErrorf(t, err, "checkInitError: expected no error, got %v", err)
+			return
+		}
+		if assert.Errorf(t, err, "checkInitError: expected error %q", want) {
+			assert.Containsf(t, err.Error(), want, "checkInitError mismatch")
+		}
+	}
+}
+
+func TestZH07q_Init(t *testing.T) {
+	tests := []struct {
+		name   string
+		checks []checkZH07qInitFn
+		before func(*ZH07q)
+	}{
+		{
+			name: "success",
+			before: func(z *ZH07q) {
+				z.transport.(*mockTransportProvider).
+					On("Write", mock.Anything).
+					Return(nil)
+			},
+			checks: checkZH07qInit(
+				checkZH07qInitError(""),
+			),
+		},
+		{
+			name: "fail",
+			before: func(z *ZH07q) {
+				z.transport.(*mockTransportProvider).
+					On("Write", mock.Anything).
+					Return(fmt.Errorf("test-error"))
+			},
+			checks: checkZH07qInit(
+				checkZH07qInitError("test-error"),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			s := newZH07q(&Config{Transport: new(mockTransportProvider)})
+			if tt.before != nil {
+				tt.before(s)
+			}
+			err := s.Init(context.Background())
+			for _, c := range tt.checks {
+				c(t, err)
+			}
+		})
+	}
+}
+
+type checkZH07qReadFn func(*testing.T, *domain.ReadingEvent)
+
+var checkZH07qRead = func(fns ...checkZH07qReadFn) []checkZH07qReadFn { return fns }
+
+func checkZH07qReadError(want string) checkZH07qReadFn {
+	return func(t *testing.T, re *domain.ReadingEvent) {
+		t.Helper()
+		if want == "" {
+			assert.NoErrorf(t, re.Err, "checkReadError: expected no error, got %v", re.Err)
+			return
+		}
+		if assert.Errorf(t, re.Err, "checkReadError: expected error %q", want) {
+			assert.Containsf(t, re.Err.Error(), want, "checkReadError mismatch")
+		}
+	}
+}
+
+func checkZH07qReadValues(pm1, pm25, pm10 float32) checkZH07qReadFn {
+	return func(t *testing.T, re *domain.ReadingEvent) {
+		t.Helper()
+		assert.Equalf(t, pm1, re.Reading.NumberPM1, "PM1 expected %.2f, got %.2f", pm1, re.Reading.NumberPM1)
+		assert.Equalf(t, pm25, re.Reading.NumberPM25, "PM25 expected %.2f, got %.2f", pm25, re.Reading.NumberPM25)
+		assert.Equalf(t, pm10, re.Reading.NumberPM10, "PM10 expected %.2f, got %.2f", pm10, re.Reading.NumberPM10)
+	}
+}
+
+func TestZH07q_Read(t *testing.T) {
+	tests := []struct {
+		name   string
+		checks []checkZH07qReadFn
+		before func(*ZH07q)
+	}{
+		{
+			name: "success",
+			before: func(z *ZH07q) {
+				mk := z.transport.(*mockTransportProvider)
+
+				mk.On("Write", mock.Anything).
+					Return(nil)
+
+				mk.On("Read", mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						in := args.Get(0).([]byte)
+						copy(in, sampleQAPayload)
+					}).
+					Return(9, nil)
+			},
+			checks: checkZH07qRead(
+				checkZH07qReadError(""),
+				checkZH07qReadValues(101.0, 133.0, 150.0),
+			),
+		},
+		{
+			name: "fail - write error",
+			before: func(z *ZH07q) {
+				mk := z.transport.(*mockTransportProvider)
+
+				mk.On("Write", mock.Anything).
+					Return(fmt.Errorf("write-error"))
+
+				mk.On("Read", mock.Anything, mock.Anything).
+					Return(nil)
+			},
+
+			checks: checkZH07qRead(
+				checkZH07qReadError("write-error"),
+			),
+		},
+		{
+			name: "fail - read error",
+			before: func(z *ZH07q) {
+				mk := z.transport.(*mockTransportProvider)
+
+				mk.On("Write", mock.Anything).
+					Return(nil)
+
+				mk.On("Read", mock.Anything, mock.Anything).
+					Return(0, fmt.Errorf("read-error"))
+			},
+
+			checks: checkZH07qRead(
+				checkZH07qReadError("read-error"),
+			),
+		},
+		{
+			name: "fail - invalid read",
+			before: func(z *ZH07q) {
+				mk := z.transport.(*mockTransportProvider)
+
+				mk.On("Write", mock.Anything).
+					Return(nil)
+
+				mk.On("Read", mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						in := args.Get(0).([]byte)
+						copy(in, sampleQABadChecksum)
+					}).
+					Return(9, nil)
+			},
+
+			checks: checkZH07qRead(
+				checkZH07qReadError("checksum mismatch"),
+			),
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			s := newZH07q(&Config{Transport: new(mockTransportProvider)})
+			if tt.before != nil {
+				tt.before(s)
+			}
+			r := s.Read(context.Background())
+			for _, c := range tt.checks {
+				c(t, r)
+			}
+		})
+	}
+}
+
+// --------------- Run tests ---------------
+
+type checkZH07qRunFn func(*testing.T, *domain.ReadingEvent)
+
+var checkZH07qRun = func(fns ...checkZH07qRunFn) []checkZH07qRunFn { return fns }
+
+func checkZH07qRunError(want string) checkZH07qRunFn {
+	return func(t *testing.T, re *domain.ReadingEvent) {
+		t.Helper()
+		if want == "" && re.Err != nil {
+			assert.NoErrorf(t, re.Err, "checkInitError: expected no error, got %v", re.Err)
+			return
+		}
+		if want != "" && assert.NotNil(t, re.Err) {
+			if assert.Errorf(t, re.Err, "checkInitError: expected error %q", want) {
+				assert.Containsf(t, re.Err.Error(), want, "checkInitError mismatch")
+			}
+		}
+	}
+}
+
+func checkZH07qRunValues(pm1, pm25, pm10 float32) checkZH07qRunFn {
+	return func(t *testing.T, re *domain.ReadingEvent) {
+		t.Helper()
+		assert.Equalf(t, pm1, re.Reading.NumberPM1, "PM1 expected %.2f, got %.2f", pm1, re.Reading.NumberPM1)
+		assert.Equalf(t, pm25, re.Reading.NumberPM25, "PM25 expected %.2f, got %.2f", pm25, re.Reading.NumberPM25)
+		assert.Equalf(t, pm10, re.Reading.NumberPM10, "PM10 expected %.2f, got %.2f", pm10, re.Reading.NumberPM10)
+	}
+}
+
+func TestZH07q_Run(t *testing.T) {
+	tests := []struct {
+		name   string
+		checks []checkZH07qRunFn
+		before func(*ZH07q)
+		after  func(*ZH07q, context.CancelFunc)
+	}{
+		{
+			name: "emits valid readings on tick",
+			before: func(z *ZH07q) {
+				mk := z.transport.(*mockTransportProvider)
+				mk.On("Write", mock.Anything).Return(nil).Maybe()
+				mk.On("Read", mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						in := args.Get(0).([]byte)
+						copy(in, sampleQAPayload)
+					}).
+					Return(9, nil).Maybe()
+			},
+			after: func(z *ZH07q, _ context.CancelFunc) {
+				z.Stop()
+			},
+			checks: checkZH07qRun(
+				checkZH07qRunError(""),
+				checkZH07qRunValues(101.0, 133.0, 150.0),
+			),
+		},
+		{
+			name: "emits error readings on transport failure",
+			before: func(z *ZH07q) {
+				mk := z.transport.(*mockTransportProvider)
+				mk.On("Write", mock.Anything).
+					Return(fmt.Errorf("write-error")).Maybe()
+				mk.On("Read", mock.Anything, mock.Anything).
+					Return(0, nil).Maybe()
+			},
+			after: func(z *ZH07q, _ context.CancelFunc) {
+				z.Stop()
+			},
+			checks: checkZH07qRun(
+				checkZH07qRunError("write-error"),
+			),
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+
+			s := newZH07q(&Config{
+				Transport: new(mockTransportProvider),
+				Interval:  10 * time.Millisecond,
+			})
+
+			if tt.before != nil {
+				tt.before(s)
+			}
+
+			ch := s.Run(ctx)
+
+			var (
+				wg  sync.WaitGroup
+				got *domain.ReadingEvent
+			)
+
+			wg.Go(func() {
+				timeout := time.After(1 * time.Second)
+				for {
+					select {
+					case reading, ok := <-ch:
+						if !ok {
+							return // channel closed as expected
+						}
+						got = reading
+					case <-timeout:
+						cancel()
+						t.Fatal("timed out waiting for channel to close")
+					}
+				}
+			})
+
+			go func() {
+				time.Sleep(20 * time.Millisecond)
+				s.Stop()
+			}()
+
+			wg.Wait()
+
+			for _, c := range tt.checks {
+				c(t, got)
+			}
+
+		})
 	}
 }
