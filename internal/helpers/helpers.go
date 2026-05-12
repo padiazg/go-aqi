@@ -18,12 +18,14 @@ type RetryConfig struct {
 // WithRetry retries fn up to config.Times times with config.Interval between attempts.
 // If config.Timeout > 0, a timeout context wraps the parent ctx.
 func WithRetry(ctx context.Context, config *RetryConfig) error {
-	timeoutCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	var timeoutCtx context.Context
+	var cancel context.CancelFunc
 
 	if config.Timeout > 0 {
 		timeoutCtx, cancel = context.WithTimeout(ctx, config.Timeout)
 		defer cancel()
+	} else {
+		timeoutCtx = ctx
 	}
 
 	ticker := time.NewTicker(config.Interval)
