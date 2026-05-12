@@ -2,7 +2,8 @@ package domain
 
 import "time"
 
-// AirQualityReading holds an AQI reading from a sensor
+// AirQualityReading holds an AQI reading from a sensor.
+// PM4 fields (MassPM4, NumberPM4) are sensor-specific and populated by drivers that support PM4 measurement.
 type AirQualityReading struct {
 	Timestamp           time.Time
 	SensorID            string

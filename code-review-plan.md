@@ -20,8 +20,8 @@
 - [x] `drivers/zh07/zh07q.go:30` — Document default transport as test no-op
 
 ## 3. Dead Code Removal
-- [ ] `drivers/zh07/helpers.go:22-30` — Remove unused exported `toHex` function
-- [ ] `domain/reading.go:12,17` — Remove `MassPM4` and `NumberPM4` (never populated) or document as sensor-specific
+- [x] `drivers/zh07/helpers.go:22-30` — Remove unused exported `toHex` function
+- [x] `domain/reading.go:12,17` — Remove `MassPM4` and `NumberPM4` (never populated) or document as sensor-specific
 
 ## 4. Bug Fix
 - [ ] `drivers/sps30/sps30.go:193` — Fix `in[27]` used twice → likely `in[28]` for `NumberPM05`
