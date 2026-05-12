@@ -88,7 +88,10 @@ func (s *ZH07q) Run(ctx context.Context) <-chan *domain.ReadingEvent {
 			case <-runCtx.Done():
 				return
 			case <-ticker.C:
-				ch <- s.Read(runCtx)
+				event := s.Read(runCtx)
+				if event != nil {
+					ch <- event
+				}
 			}
 		}
 	}()
@@ -125,7 +128,7 @@ func (z *ZH07q) IsReadingValid() bool {
 
 // CalculateChecksum calculates the checksum from the payload.
 func (z *ZH07q) CalculateChecksum() int {
-	return calculateChecksum(&z.data)
+	return calculateChecksum(z.data)
 }
 
 // getChecksum recovers the checksum from the payload.

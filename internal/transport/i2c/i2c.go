@@ -34,7 +34,7 @@ func (i *I2CTransport) Read(in []byte, _ bool) (int, error) {
 func (i *I2CTransport) Write(out []byte) error {
 	_, err := i.i2c.WriteBytes(out)
 	if err != nil {
-		return fmt.Errorf("i2c write: %X\n%w", out, err)
+		return fmt.Errorf("i2c write %X: %w", out, err)
 	}
 
 	return nil

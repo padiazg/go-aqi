@@ -7,16 +7,17 @@ import (
 	"github.com/padiazg/go-aqi/domain"
 )
 
-type NewFn func(*testing.T, domain.SensorProvider)
+type NewFn func(*testing.T, domain.SensorProvider, error)
 
 var checkNew = func(fns ...NewFn) []NewFn { return fns }
 
 func checkType(want domain.SensorProvider) NewFn {
-	return func(t *testing.T, sp domain.SensorProvider) {
+	return func(t *testing.T, sp domain.SensorProvider, err error) {
 		if want == nil {
-			assert.Empty(t, sp)
+			assert.NotNil(t, err)
 			return
 		}
+		assert.Nil(t, err)
 		assert.IsType(t, want, sp)
 	}
 }
@@ -33,12 +34,12 @@ func TestNew(t *testing.T) {
 			checks: checkNew(checkType(nil)),
 		},
 		{
-			name:   "sucess - ModeInitiative",
+			name:   "success - ModeInitiative",
 			config: &Config{Mode: ModeInitiative},
 			checks: checkNew(checkType(&ZH07i{})),
 		},
 		{
-			name:   "sucess - ModeQA",
+			name:   "success - ModeQA",
 			config: &Config{Mode: ModeQA},
 			checks: checkNew(checkType(&ZH07q{})),
 		},
@@ -47,9 +48,9 @@ func TestNew(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			r := New(tt.config)
+			r, err := New(tt.config)
 			for _, c := range tt.checks {
-				c(t, r)
+				c(t, r, err)
 			}
 		})
 	}

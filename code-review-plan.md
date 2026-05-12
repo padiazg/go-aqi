@@ -34,12 +34,12 @@
 
 ### 6.2 Code Quality
 
-- [ ] `drivers/zh07/helpers.go:4` — `calculateChecksum` takes `*[]byte` (pointer to slice) — unnecessary indirection, should take `[]byte`
-- [ ] `drivers/zh07/zh07i.go:69,82,87` — `Read()` returns `&ReadingEvent{}` with nil Reading on bad frames — caller can't distinguish "no data yet" from "valid empty frame"
-- [ ] `drivers/zh07/zh07.go:30` — `New()` returns `nil` for unknown mode — silent failure, no error returned
-- [ ] `drivers/sps30/sps30.go:207-211` — `IsDataReady()` returns `int` (-1/0/1) — ambiguous return, should return `(bool, error)`
-- [ ] `internal/transport/i2c/i2c.go:37` — Format string `"i2c write: %X\n%w"` — literal `\n` prints as text, not newline
-- [ ] `drivers/sps30/sps30.go:137-152` — `ReadSerial()` doesn't handle NUL-terminated strings like `ReadArticleCode()` — could include trailing zeros
+- [x] `drivers/zh07/helpers.go:4` — `calculateChecksum` takes `*[]byte` (pointer to slice) — unnecessary indirection, should take `[]byte`
+- [x] `drivers/zh07/zh07i.go:69,82,87` — `Read()` returns `&ReadingEvent{}` with nil Reading on bad frames — caller can't distinguish "no data yet" from "valid empty frame" (resolved: return `ErrInvalidFrame` + nil-guard in `Run()`)
+- [x] `drivers/zh07/zh07.go:30` — `New()` returns `nil` for unknown mode — silent failure, no error returned
+- [x] `drivers/sps30/sps30.go:207-211` — `IsDataReady()` returns `int` (-1/0/1) — ambiguous return, should return `(bool, error)`
+- [x] `internal/transport/i2c/i2c.go:37` — Format string `"i2c write: %X\n%w"` — literal `\n` prints as text, not newline
+- [x] `drivers/sps30/sps30.go:137-152` — `ReadSerial()` doesn't handle NUL-terminated strings like `ReadArticleCode()` — could include trailing zeros
 
 ### 6.3 Incomplete Features
 

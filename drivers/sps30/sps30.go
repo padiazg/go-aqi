@@ -1,6 +1,7 @@
 package sps30
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -52,7 +53,10 @@ func (s *SPS30) Read(ctx context.Context) *domain.ReadingEvent {
 		Timeout:  2 * time.Second,
 		CountAs:  func(err error) bool { return !errors.Is(err, ErrNotReady) }, // ErrNotReady doesn't count for retry
 		Fn: func() error {
-			if s.IsDataReady() != 1 {
+			if ready, err := s.IsDataReady(); err != nil || !ready {
+				if err != nil {
+					return fmt.Errorf("is data ready: %w", err)
+				}
 				return ErrNotReady
 			}
 
@@ -135,20 +139,22 @@ func (s *SPS30) ReadArticleCode() (string, error) {
 
 // ReadSerial reads sensor serial
 func (s *SPS30) ReadSerial() (string, error) {
-	var serial []byte
 	in := make([]byte, 47)
 	err := s.readFromAddress([]byte{0xD0, 0x33}, in)
 	if err != nil {
 		return "", fmt.Errorf("ReadSerial: %w", err)
 	}
 
+	// collect non-padding bytes
+	var raw []byte
 	for i := range in {
 		if (i % 3) != 2 {
-			serial = append(serial, in[i])
+			raw = append(raw, in[i])
 		}
 	}
 
-	return string(serial), nil
+	// trim trailing NUL bytes
+	return string(bytes.TrimRight(raw, "\x00")), nil
 }
 
 // ReadCleaningInterval reads cleaning interval from sensor
@@ -200,16 +206,14 @@ func (s *SPS30) ReadMeasurement() (*domain.AirQualityReading, error) {
 	}, nil
 }
 
-// IsDataReady reads data-ready flag
-// 0x00: no new measurements available
-// 0x01: new measurements ready to read
-func (s *SPS30) IsDataReady() int {
+// IsDataReady checks if new measurements are ready to read.
+func (s *SPS30) IsDataReady() (bool, error) {
 	in := make([]byte, 3)
 	if err := s.readFromAddress([]byte{0x02, 0x02}, in); err != nil {
-		return -1
+		return false, err
 	}
 
-	return int(in[1])
+	return in[1] == 0x01, nil
 }
 
 // Reset sends reset command

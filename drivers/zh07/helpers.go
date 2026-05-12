@@ -1,9 +1,9 @@
 package zh07
 
 // calculateChecksum computes the checksum for sensor data validation.
-func calculateChecksum(d *[]byte) int {
+func calculateChecksum(d []byte) int {
 	var checksum byte
-	for _, v := range (*d)[1 : len(*d)-1] {
+	for _, v := range d[1 : len(d)-1] {
 		checksum += v
 	}
 	return int((^checksum) + 1)

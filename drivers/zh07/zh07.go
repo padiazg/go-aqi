@@ -1,6 +1,7 @@
 package zh07
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/padiazg/go-aqi/domain"
@@ -20,13 +21,13 @@ type Config struct {
 	Mode      ModeType
 }
 
-func New(config *Config) domain.SensorProvider {
+func New(config *Config) (domain.SensorProvider, error) {
 	switch config.Mode {
 	case ModeInitiative:
-		return newZH07i(config)
+		return newZH07i(config), nil
 	case ModeQA:
-		return newZH07q(config)
+		return newZH07q(config), nil
 	default:
-		return nil
+		return nil, fmt.Errorf("%w: %d", ErrUnknownMode, config.Mode)
 	}
 }

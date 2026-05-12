@@ -66,7 +66,7 @@ func (z *ZH07i) Read(ctx context.Context) *domain.ReadingEvent {
 	}
 
 	if b0[0] != 0x42 {
-		return nil
+		return &domain.ReadingEvent{Err: fmt.Errorf("%w: expected 0x42, got 0x%02x", ErrInvalidFrame, b0[0])}
 	}
 
 	// then we read the next 3 bytes, which should be:
@@ -78,12 +78,12 @@ func (z *ZH07i) Read(ctx context.Context) *domain.ReadingEvent {
 	}
 
 	if b1[0] != 0x4d {
-		return nil
+		return &domain.ReadingEvent{Err: fmt.Errorf("%w: expected 0x4d, got 0x%02x", ErrInvalidFrame, b1[0])}
 	}
 
 	// frame length must be 0x00 0x1C => 28
 	if bytesToUint16BE(b1[1:3]) != 28 {
-		return nil
+		return &domain.ReadingEvent{Err: fmt.Errorf("%w: expected length 28, got %d", ErrInvalidFrame, bytesToUint16BE(b1[1:3]))}
 	}
 
 	// if everything matches so far, we read the remaining data (28 bytes)
@@ -123,7 +123,10 @@ func (s *ZH07i) Run(ctx context.Context) <-chan *domain.ReadingEvent {
 			case <-runCtx.Done():
 				return
 			case <-ticker.C:
-				ch <- s.Read(runCtx)
+				event := s.Read(runCtx)
+				if event != nil {
+					ch <- event
+				}
 			}
 		}
 	}()

@@ -13,6 +13,8 @@ var (
 	ErrInvalidFrame = errors.New("invalid data frame")
 	// ErrSensorCommunication is returned when communication with the sensor fails
 	ErrSensorCommunication = errors.New("sensor communication failed")
+	//ErrUnknownMode is returned when an uknown mode is requested
+	ErrUnknownMode = errors.New("unknown mode")
 
 	commandSetInitiativeUploadMode = []byte{
 		0xFF,

@@ -51,7 +51,10 @@ config := &zh07.Config{
     Mode:      zh07.ModeQA,
 }
 
-sensor := zh07.New(config)
+sensor, err := zh07.New(config)
+if err != nil {
+    log.Fatal(err)
+}
 sensor.Init(ctx)
 
 for event := range sensor.Run(ctx) {
