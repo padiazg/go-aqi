@@ -21,11 +21,11 @@ var (
 	table = crc8.MakeTable(CRC8_SPS30)
 )
 
-func crc(data []byte) byte {
+func crc8Checksum(data []byte) byte {
 	return crc8.Checksum(data, table)
 }
 
-func byteArrayToFloat32(data []byte) float32 {
+func bytesToFloat32(data []byte) float32 {
 	a0 := binary.BigEndian.Uint32(data)
 	a1 := math.Float32frombits(a0)
 	return a1

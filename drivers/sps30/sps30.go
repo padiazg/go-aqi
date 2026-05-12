@@ -109,7 +109,7 @@ func (s *SPS30) Stop() {
 	}
 }
 
-// ---------------------------- SPS30 especifics
+// ---------------------------- SPS30 specifics
 // ReadArticleCode reads sensor article code
 func (s *SPS30) ReadArticleCode() (string, error) {
 	var code []byte
@@ -162,7 +162,7 @@ func (s *SPS30) ReadCleaningInterval() (int64, error) {
 
 // StartMeasurement starts measurement
 func (s *SPS30) StartMeasurement() error {
-	err := s.transport.Write([]byte{0x00, 0x10, 0x03, 0x00, crc([]byte{0x03, 0x00})})
+	err := s.transport.Write([]byte{0x00, 0x10, 0x03, 0x00, crc8Checksum([]byte{0x03, 0x00})})
 	if err != nil {
 		return fmt.Errorf("StartMeasurement: %w", err)
 	}
@@ -186,16 +186,16 @@ func (s *SPS30) ReadMeasurement() (*domain.AirQualityReading, error) {
 	}
 
 	return &domain.AirQualityReading{
-		MassPM1:             byteArrayToFloat32([]byte{in[0], in[1], in[3], in[4]}),
-		MassPM25:            byteArrayToFloat32([]byte{in[6], in[7], in[9], in[10]}),
-		MassPM4:             byteArrayToFloat32([]byte{in[12], in[13], in[15], in[16]}),
-		MassPM10:            byteArrayToFloat32([]byte{in[18], in[19], in[21], in[22]}),
-		NumberPM05:          byteArrayToFloat32([]byte{in[24], in[25], in[27], in[27]}),
-		NumberPM1:           byteArrayToFloat32([]byte{in[30], in[31], in[33], in[34]}),
-		NumberPM25:          byteArrayToFloat32([]byte{in[36], in[37], in[39], in[40]}),
-		NumberPM4:           byteArrayToFloat32([]byte{in[42], in[43], in[45], in[46]}),
-		NumberPM10:          byteArrayToFloat32([]byte{in[48], in[49], in[51], in[52]}),
-		TypicalParticleSize: byteArrayToFloat32([]byte{in[54], in[55], in[57], in[58]}),
+		MassPM1:             bytesToFloat32([]byte{in[0], in[1], in[3], in[4]}),
+		MassPM25:            bytesToFloat32([]byte{in[6], in[7], in[9], in[10]}),
+		MassPM4:             bytesToFloat32([]byte{in[12], in[13], in[15], in[16]}),
+		MassPM10:            bytesToFloat32([]byte{in[18], in[19], in[21], in[22]}),
+		NumberPM05:          bytesToFloat32([]byte{in[24], in[25], in[27], in[28]}),
+		NumberPM1:           bytesToFloat32([]byte{in[30], in[31], in[33], in[34]}),
+		NumberPM25:          bytesToFloat32([]byte{in[36], in[37], in[39], in[40]}),
+		NumberPM4:           bytesToFloat32([]byte{in[42], in[43], in[45], in[46]}),
+		NumberPM10:          bytesToFloat32([]byte{in[48], in[49], in[51], in[52]}),
+		TypicalParticleSize: bytesToFloat32([]byte{in[54], in[55], in[57], in[58]}),
 	}, nil
 }
 

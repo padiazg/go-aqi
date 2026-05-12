@@ -6,15 +6,15 @@ import (
 
 // calculateChecksum computes the checksum for sensor data validation.
 func calculateChecksum(d *[]byte) int {
-	var tempq byte
+	var checksum byte
 	for _, v := range (*d)[1 : len(*d)-1] {
-		tempq += v
+		checksum += v
 	}
-	return int((^tempq) + 1)
+	return int((^checksum) + 1)
 }
 
 // byteToInt converts 2 bytes to int in big-endian format.
-func byteToInt(data []byte) int {
+func bytesToUint16BE(data []byte) int {
 	return int(data[1]) + (int(data[0]) << 8)
 }
 

@@ -80,7 +80,7 @@ func (z *ZH07i) Read(ctx context.Context) *domain.ReadingEvent {
 	}
 
 	// frame length must be 0x00 0x1C => 28
-	if byteToInt(b1[1:3]) != 28 {
+	if bytesToUint16BE(b1[1:3]) != 28 {
 		return nil
 	}
 
@@ -95,9 +95,9 @@ func (z *ZH07i) Read(ctx context.Context) *domain.ReadingEvent {
 
 	return &domain.ReadingEvent{
 		Reading: &domain.AirQualityReading{
-			NumberPM1:  float32(byteToInt(z.data[10:12])),
-			NumberPM25: float32(byteToInt(z.data[12:14])),
-			NumberPM10: float32(byteToInt(z.data[14:16])),
+			NumberPM1:  float32(bytesToUint16BE(z.data[10:12])),
+			NumberPM25: float32(bytesToUint16BE(z.data[12:14])),
+			NumberPM10: float32(bytesToUint16BE(z.data[14:16])),
 		},
 	}
 }

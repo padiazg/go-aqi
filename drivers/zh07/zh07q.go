@@ -60,9 +60,9 @@ func (z *ZH07q) Read(ctx context.Context) *domain.ReadingEvent {
 
 	return &domain.ReadingEvent{
 		Reading: &domain.AirQualityReading{
-			NumberPM1:  float32(byteToInt(z.data[6:8])),
-			NumberPM25: float32(byteToInt(z.data[2:4])),
-			NumberPM10: float32(byteToInt(z.data[4:6])),
+			NumberPM1:  float32(bytesToUint16BE(z.data[6:8])),
+			NumberPM25: float32(bytesToUint16BE(z.data[2:4])),
+			NumberPM10: float32(bytesToUint16BE(z.data[4:6])),
 		},
 	}
 }
@@ -101,7 +101,7 @@ func (s *ZH07q) Stop() {
 	}
 }
 
-// ---------------------------- ZH07q especifics
+// ---------------------------- ZH07q specifics
 func (z *ZH07q) writeAndRead(command, in []byte) error {
 	if err := z.transport.Write(command); err != nil {
 		return fmt.Errorf("writeAndRead sending code: %X: %w", command, err)
