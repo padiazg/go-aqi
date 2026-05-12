@@ -18,16 +18,31 @@ var _ domain.SensorProvider = (*SPS30)(nil)
 var ErrNotReady = errors.New("not ready")
 
 type SPS30 struct {
+	id        string
 	cancel    context.CancelFunc
 	transport domain.TransportProvider
 	interval  time.Duration
 }
 
-// New creates a new sensor object
-func New(i2c *i2c.I2C, interval time.Duration) *SPS30 {
-	return &SPS30{
+// New creates a new sensor object.
+func New(i2c *i2c.I2C, interval time.Duration, opts ...func(*SPS30)) *SPS30 {
+	s := &SPS30{
+		id:        "sps30",
 		transport: i2ctransport.New(i2c),
 		interval:  interval,
+	}
+	for _, opt := range opts {
+		opt(s)
+	}
+	return s
+}
+
+// WithID sets the sensor ID used for the SensorID field on readings.
+func WithID(id string) func(*SPS30) {
+	return func(s *SPS30) {
+		if id != "" {
+			s.id = id
+		}
 	}
 }
 
@@ -193,6 +208,8 @@ func (s *SPS30) ReadMeasurement() (*domain.AirQualityReading, error) {
 	}
 
 	return &domain.AirQualityReading{
+		Timestamp:           time.Now(),
+		SensorID:            s.id,
 		MassPM1:             bytesToFloat32([]byte{in[0], in[1], in[3], in[4]}),
 		MassPM25:            bytesToFloat32([]byte{in[6], in[7], in[9], in[10]}),
 		MassPM4:             bytesToFloat32([]byte{in[12], in[13], in[15], in[16]}),

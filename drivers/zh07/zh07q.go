@@ -15,6 +15,7 @@ var _ domain.SensorProvider = (*ZH07q)(nil)
 
 // ZH07q drives the ZH07 sensor in query-response mode (host polls sensor for data).
 type ZH07q struct {
+	id        string
 	transport domain.TransportProvider
 	cancel    context.CancelFunc
 	interval  time.Duration
@@ -32,7 +33,13 @@ func newZH07q(config *Config) *ZH07q {
 		config.Transport = serial.New(bufio.NewReadWriter(bufio.NewReader(bytes.NewReader([]byte{})), nil))
 	}
 
+	id := config.ID
+	if id == "" {
+		id = "zh07-q"
+	}
+
 	return &ZH07q{
+		id:        id,
 		transport: config.Transport,
 		data:      make([]byte, 9),
 		interval:  config.Interval,
@@ -62,6 +69,8 @@ func (z *ZH07q) Read(ctx context.Context) *domain.ReadingEvent {
 
 	return &domain.ReadingEvent{
 		Reading: &domain.AirQualityReading{
+			Timestamp:  time.Now(),
+			SensorID:   z.id,
 			NumberPM1:  float32(bytesToUint16BE(z.data[6:8])),
 			NumberPM25: float32(bytesToUint16BE(z.data[2:4])),
 			NumberPM10: float32(bytesToUint16BE(z.data[4:6])),

@@ -19,6 +19,7 @@ type Config struct {
 	Transport domain.TransportProvider
 	Interval  time.Duration
 	Mode      ModeType
+	ID        string
 }
 
 func New(config *Config) (domain.SensorProvider, error) {

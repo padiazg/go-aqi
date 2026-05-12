@@ -15,6 +15,7 @@ var _ domain.SensorProvider = (*ZH07i)(nil)
 
 // ZH07i drives the ZH07 sensor in initiative upload mode (sensor pushes data without polling).
 type ZH07i struct {
+	id        string
 	transport domain.TransportProvider
 	cancel    context.CancelFunc
 	interval  time.Duration
@@ -32,7 +33,13 @@ func newZH07i(config *Config) *ZH07i {
 		config.Transport = serial.New(bufio.NewReadWriter(bufio.NewReader(bytes.NewReader([]byte{})), nil))
 	}
 
+	id := config.ID
+	if id == "" {
+		id = "zh07-i"
+	}
+
 	return &ZH07i{
+		id:        id,
 		data:      make([]byte, 32),
 		transport: config.Transport,
 		interval:  config.Interval,
@@ -97,6 +104,8 @@ func (z *ZH07i) Read(ctx context.Context) *domain.ReadingEvent {
 
 	return &domain.ReadingEvent{
 		Reading: &domain.AirQualityReading{
+			Timestamp:  time.Now(),
+			SensorID:   z.id,
 			NumberPM1:  float32(bytesToUint16BE(z.data[10:12])),
 			NumberPM25: float32(bytesToUint16BE(z.data[12:14])),
 			NumberPM10: float32(bytesToUint16BE(z.data[14:16])),

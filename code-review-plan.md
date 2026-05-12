@@ -43,7 +43,7 @@
 
 ### 6.3 Incomplete Features
 
-- [ ] `domain/reading.go` — `Timestamp` and `SensorID` fields never populated by any driver
+- [x] `domain/reading.go` — `Timestamp` and `SensorID` fields never populated by any driver
   - Plan: add optional `id string` param to each `New()` constructor, default to driver type name ("sps30", "zh07-q", "zh07-i") when empty
   - Plan: set `Timestamp: time.Now()` and `SensorID: s.id` in each driver's `Read()` / `ReadMeasurement()` at the point of creating the reading
 
