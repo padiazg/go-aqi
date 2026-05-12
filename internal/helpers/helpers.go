@@ -6,14 +6,17 @@ import (
 	"time"
 )
 
+// RetryConfig controls the behavior of WithRetry.
 type RetryConfig struct {
-	Fn       func() error
-	CountAs  func(err error) bool // nil = everything counts
-	Interval time.Duration        // 0 = no retry limits
-	Timeout  time.Duration        // 0 = no timeout (respects father ctx)
-	Times    int
+	Fn       func() error           // function to retry
+	CountAs  func(err error) bool   // nil means all errors count toward retry limit
+	Interval time.Duration          // 0 means no retry interval
+	Timeout  time.Duration          // 0 means no timeout (respects parent context)
+	Times    int                    // max retry attempts; 0 means unlimited
 }
 
+// WithRetry retries fn up to config.Times times with config.Interval between attempts.
+// If config.Timeout > 0, a timeout context wraps the parent ctx.
 func WithRetry(ctx context.Context, config *RetryConfig) error {
 	timeoutCtx, cancel := context.WithCancel(ctx)
 	defer cancel()

@@ -32,9 +32,8 @@ func New(i2c *i2c.I2C, interval time.Duration) *SPS30 {
 
 // ---------------------------- Interface
 
-// Init initializes the sensor.
+// Init initializes the sensor. No-op — SPS30 starts on first measurement request.
 func (s *SPS30) Init(ctx context.Context) error {
-
 	return nil
 }
 
@@ -110,7 +109,9 @@ func (s *SPS30) Stop() {
 }
 
 // ---------------------------- SPS30 specifics
-// ReadArticleCode reads sensor article code
+
+// ReadArticleCode reads the sensor's article code via I2C address 0xD025.
+// The response is packed in a 47-byte buffer with every 3rd byte as padding (skipped).
 func (s *SPS30) ReadArticleCode() (string, error) {
 	var code []byte
 	in := make([]byte, 47)

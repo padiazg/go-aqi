@@ -9,15 +9,15 @@
 - [x] `drivers/sps30/helpers.go:24` — Rename `crc` → `crc8Checksum`
 
 ## 2. Missing Comments / Godoc
-- [ ] `domain/transport_provider.go` — Add godoc for `TransportProvider` interface
-- [ ] `domain/sensor_provider.go` — Add godoc for `SensorProvider` interface
-- [ ] `drivers/sps30/sps30.go:36` — Document why `Init()` body is empty
-- [ ] `drivers/sps30/sps30.go:113` — Document `ReadArticleCode` (non-obvious term)
-- [ ] `internal/helpers/helpers.go:17` — Add godoc for `WithRetry` function
-- [ ] `internal/helpers/helpers.go:12` — Clarify `CountAs` comment ("nil = everything counts" → "nil means all errors count toward retry limit")
-- [ ] `internal/helpers/helpers.go:13` — Fix "father ctx" → "parent context"
-- [ ] `drivers/zh07/zh07i.go:30` — Document default transport as test no-op
-- [ ] `drivers/zh07/zh07q.go:30` — Document default transport as test no-op
+- [x] `domain/transport_provider.go` — Add godoc for `TransportProvider` interface
+- [x] `domain/sensor_provider.go` — Add godoc for `SensorProvider` interface
+- [x] `drivers/sps30/sps30.go:36` — Document why `Init()` body is empty
+- [x] `drivers/sps30/sps30.go:113` — Document `ReadArticleCode` (non-obvious term)
+- [x] `internal/helpers/helpers.go:17` — Add godoc for `WithRetry` function
+- [x] `internal/helpers/helpers.go:12` — Clarify `CountAs` comment ("nil = everything counts" → "nil means all errors count toward retry limit")
+- [x] `internal/helpers/helpers.go:13` — Fix "father ctx" → "parent context"
+- [x] `drivers/zh07/zh07i.go:30` — Document default transport as test no-op
+- [x] `drivers/zh07/zh07q.go:30` — Document default transport as test no-op
 
 ## 3. Dead Code Removal
 - [ ] `drivers/zh07/helpers.go:22-30` — Remove unused exported `toHex` function

@@ -13,6 +13,7 @@ import (
 
 var _ domain.SensorProvider = (*ZH07q)(nil)
 
+// ZH07q drives the ZH07 sensor in query-response mode (host polls sensor for data).
 type ZH07q struct {
 	transport domain.TransportProvider
 	cancel    context.CancelFunc
@@ -20,13 +21,14 @@ type ZH07q struct {
 	data      []byte
 }
 
-// New creates a new sensor object
+// newZH07q creates a new sensor object.
 func newZH07q(config *Config) *ZH07q {
 	if config == nil {
 		config = &Config{}
 	}
 
 	if config.Transport == nil {
+		// default is a no-op transport for testing (reads empty byte slice)
 		config.Transport = serial.New(bufio.NewReadWriter(bufio.NewReader(bytes.NewReader([]byte{})), nil))
 	}
 
