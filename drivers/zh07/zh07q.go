@@ -64,7 +64,7 @@ func (z *ZH07q) Read(ctx context.Context) *domain.ReadingEvent {
 	}
 
 	if !z.IsReadingValid() {
-		return &domain.ReadingEvent{Err: fmt.Errorf("%w: received=%X, calculated=%X", ErrChecksumMismatch, z.getChecksum(), calculateChecksum(z.data))}
+		return &domain.ReadingEvent{Err: fmt.Errorf("%w: received=%X, calculated=%X", ErrChecksumMismatch, z.getChecksum(), z.calculateChecksum())}
 	}
 
 	return &domain.ReadingEvent{
@@ -132,10 +132,19 @@ func (z *ZH07q) writeAndRead(command, in []byte) error {
 
 // IsReadingValid checks if the calculated checksum matches the payload checksum.
 func (z *ZH07q) IsReadingValid() bool {
-	return calculateChecksum(z.data) == z.getChecksum()
+	return z.calculateChecksum() == z.getChecksum()
 }
 
 // getChecksum recovers the checksum from the payload.
 func (z *ZH07q) getChecksum() int {
 	return int(z.data[8])
+}
+
+// getChecksum recovers the checksum from the payload.
+func (z *ZH07q) calculateChecksum() int {
+	var tempq byte
+	for _, v := range (z.data)[1 : len(z.data)-1] {
+		tempq += v
+	}
+	return int((^tempq) + 1)
 }

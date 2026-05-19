@@ -506,13 +506,40 @@ func TestZH07i_getChecksum(t *testing.T) {
 	assert.Equal(t, bytesToUint16BE([]byte{0x03, 0x27}), r)
 }
 
-// TODO: check checksum algorithm for interactive mode
-// func TestZH07i_CalculateChecksum(t *testing.T) {
-// 	s := newZH07i(&Config{Transport: new(mockTransportProvider)})
-// 	s.data = sampleInitiativePayload
+func TestZH07i_calculateChecksum(t *testing.T) {
+	s := newZH07i(&Config{Transport: new(mockTransportProvider)})
+	s.data = sampleInitiativePayload
 
-// 	// Act
-// 	r := s.CalculateChecksum()
+	// Act
+	r := s.calculateChecksum()
 
-// 	assert.Equal(t, bytesToUint16BE([]byte{0x03, 0x27}), r)
-// }
+	assert.Equal(t, bytesToUint16BE(sampleInitiativePayload[30:]), r)
+}
+
+func TestZH07i_IsReadingValid(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+		data []byte
+	}{
+		{
+			name: "success",
+			data: sampleInitiativePayload,
+			want: true,
+		},
+		{
+			name: "bad checksum",
+			data: sampleInitiativeBadChecksum,
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			s := newZH07i(&Config{Transport: new(mockTransportProvider)})
+			s.data = tt.data
+			r := s.IsReadingValid()
+			assert.Equal(t, tt.want, r)
+		})
+	}
+}

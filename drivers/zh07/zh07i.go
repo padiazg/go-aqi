@@ -151,10 +151,21 @@ func (s *ZH07i) Stop() {
 
 // IsReadingValid checks if the calculated checksum matches the payload checksum.
 func (z *ZH07i) IsReadingValid() bool {
-	return calculateChecksum(z.data) == z.getChecksum()
+	return z.calculateChecksum() == z.getChecksum()
 }
 
 // getChecksum recovers the checksum from the payload.
 func (z *ZH07i) getChecksum() int {
-	return int(bytesToUint16BE(z.data[30:32]))
+	return int(bytesToUint16BE(z.data[30:]))
+}
+
+// calculateChecksum calculates the checksum from the payload.
+// The checksum is calculated by adding all the first 30 bytes of the data received;
+// the last 2 bytes are the checksum.
+func (z *ZH07i) calculateChecksum() int {
+	var r0 int
+	for _, v := range z.data[:30] {
+		r0 += int(v)
+	}
+	return r0
 }

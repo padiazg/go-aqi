@@ -6,47 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_calculateChecksum(t *testing.T) {
-	tests := []struct {
-		name string
-		d    []byte
-		want int
-	}{
-		{
-			name: "case 1",
-			d:    []byte{0x01, 0x02, 0x03},
-			want: 254,
-		},
-		{
-			name: "case 2",
-			d:    []byte{0x01, 0x02, 0x03, 0x04},
-			want: 251,
-		},
-		{
-			name: "case 3",
-			d:    []byte{0x01, 0x02, 0x03, 0x04, 0x05},
-			want: 247,
-		},
-		{
-			name: "case 4",
-			d:    []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06},
-			want: 242,
-		},
-		{
-			name: "case 5",
-			d:    []byte{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07},
-			want: 236,
-		},
-	}
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			r := calculateChecksum(tt.d)
-			assert.Equal(t, tt.want, r)
-		})
-	}
-}
-
 func Test_bytesToUint16BE(t *testing.T) {
 	tests := []struct {
 		name string

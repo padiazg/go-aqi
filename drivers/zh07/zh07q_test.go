@@ -31,13 +31,6 @@ var (
 	}
 )
 
-func TestZH07q_getChecksum(t *testing.T) {
-	var z *ZH07q = &ZH07q{data: sampleQAPayload}
-	if cs := z.getChecksum(); cs != 0xFA {
-		t.Errorf("TestGetChecksumQA, got %d, expected %d", cs, checksum)
-	}
-}
-
 type newZH07qFn func(*testing.T, *ZH07q)
 
 var checknewZH07q = func(fns ...newZH07qFn) []newZH07qFn { return fns }
@@ -367,6 +360,53 @@ func TestZH07q_Run(t *testing.T) {
 				c(t, got)
 			}
 
+		})
+	}
+}
+
+func TestZH07q_getChecksum(t *testing.T) {
+	s := newZH07q(&Config{Transport: new(mockTransportProvider)})
+	s.data = sampleQAPayload
+
+	r := s.getChecksum()
+
+	assert.Equal(t, 0xFA, r)
+}
+
+func TestZH07q_calculateChecksum(t *testing.T) {
+	s := newZH07q(&Config{Transport: new(mockTransportProvider)})
+	s.data = sampleQAPayload
+
+	// Act
+	r := s.calculateChecksum()
+
+	assert.Equal(t, int(sampleQAPayload[8]), r)
+}
+
+func TestZH07q_IsReadingValid(t *testing.T) {
+	tests := []struct {
+		name string
+		want bool
+		data []byte
+	}{
+		{
+			name: "success",
+			data: sampleQAPayload,
+			want: true,
+		},
+		{
+			name: "bad checksum",
+			data: sampleQABadChecksum,
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			s := newZH07q(&Config{Transport: new(mockTransportProvider)})
+			s.data = tt.data
+			r := s.IsReadingValid()
+			assert.Equal(t, tt.want, r)
 		})
 	}
 }
