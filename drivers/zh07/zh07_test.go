@@ -13,6 +13,7 @@ var checkNew = func(fns ...NewFn) []NewFn { return fns }
 
 func checkType(want domain.SensorProvider) NewFn {
 	return func(t *testing.T, sp domain.SensorProvider, err error) {
+		t.Helper()
 		if want == nil {
 			assert.NotNil(t, err)
 			return

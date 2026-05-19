@@ -94,7 +94,6 @@ func (z *ZH07i) Read(ctx context.Context) *domain.ReadingEvent {
 	}
 
 	// if everything matches so far, we read the remaining data (28 bytes)
-	// if _, err = io.ReadFull(z.rw, data); err != nil {
 	if _, err = z.transport.Read(data, true); err != nil {
 		return &domain.ReadingEvent{Err: fmt.Errorf("%w: %v", ErrSensorCommunication, err)}
 	}
@@ -148,4 +147,14 @@ func (s *ZH07i) Stop() {
 	if s.cancel != nil {
 		s.cancel()
 	}
+}
+
+// IsReadingValid checks if the calculated checksum matches the payload checksum.
+func (z *ZH07i) IsReadingValid() bool {
+	return calculateChecksum(z.data) == z.getChecksum()
+}
+
+// getChecksum recovers the checksum from the payload.
+func (z *ZH07i) getChecksum() int {
+	return int(bytesToUint16BE(z.data[30:32]))
 }

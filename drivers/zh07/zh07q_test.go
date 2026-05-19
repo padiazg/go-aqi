@@ -120,10 +120,10 @@ func TestZH07q_Init(t *testing.T) {
 			before: func(z *ZH07q) {
 				z.transport.(*mockTransportProvider).
 					On("Write", mock.Anything).
-					Return(fmt.Errorf("test-error"))
+					Return(fmt.Errorf("transport-write-error"))
 			},
 			checks: checkZH07qInit(
-				checkZH07qInitError("test-error"),
+				checkZH07qInitError("transport-write-error"),
 			),
 		},
 	}
@@ -132,9 +132,11 @@ func TestZH07q_Init(t *testing.T) {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			s := newZH07q(&Config{Transport: new(mockTransportProvider)})
+
 			if tt.before != nil {
 				tt.before(s)
 			}
+
 			err := s.Init(context.Background())
 			for _, c := range tt.checks {
 				c(t, err)
@@ -143,58 +145,28 @@ func TestZH07q_Init(t *testing.T) {
 	}
 }
 
-type checkZH07qReadFn func(*testing.T, *domain.ReadingEvent)
-
-var checkZH07qRead = func(fns ...checkZH07qReadFn) []checkZH07qReadFn { return fns }
-
-func checkZH07qReadError(want string) checkZH07qReadFn {
-	return func(t *testing.T, re *domain.ReadingEvent) {
-		t.Helper()
-		if want == "" {
-			assert.NoErrorf(t, re.Err, "checkReadError: expected no error, got %v", re.Err)
-			return
-		}
-		if assert.Errorf(t, re.Err, "checkReadError: expected error %q", want) {
-			assert.Containsf(t, re.Err.Error(), want, "checkReadError mismatch")
-		}
-	}
-}
-
-func checkZH07qReadValues(pm1, pm25, pm10 float32) checkZH07qReadFn {
-	return func(t *testing.T, re *domain.ReadingEvent) {
-		t.Helper()
-		assert.Equalf(t, pm1, re.Reading.NumberPM1, "PM1 expected %.2f, got %.2f", pm1, re.Reading.NumberPM1)
-		assert.Equalf(t, pm25, re.Reading.NumberPM25, "PM25 expected %.2f, got %.2f", pm25, re.Reading.NumberPM25)
-		assert.Equalf(t, pm10, re.Reading.NumberPM10, "PM10 expected %.2f, got %.2f", pm10, re.Reading.NumberPM10)
-	}
-}
+var checkZH07qRead = func(fns ...checkReadFn) []checkReadFn { return fns }
 
 func TestZH07q_Read(t *testing.T) {
+
+	checkZH07qReadError := func(want string) checkReadFn {
+		return func(t *testing.T, re *domain.ReadingEvent) {
+			t.Helper()
+			if want == "" {
+				assert.NoErrorf(t, re.Err, "checkZH07qReadError: expected no error, got %v", re.Err)
+				return
+			}
+			if assert.Errorf(t, re.Err, "checkZH07qReadError: expected error %q", want) {
+				assert.Containsf(t, re.Err.Error(), want, "checkZH07qReadError mismatch")
+			}
+		}
+	}
+
 	tests := []struct {
 		name   string
-		checks []checkZH07qReadFn
+		checks []checkReadFn
 		before func(*ZH07q)
 	}{
-		{
-			name: "success",
-			before: func(z *ZH07q) {
-				mk := z.transport.(*mockTransportProvider)
-
-				mk.On("Write", mock.Anything).
-					Return(nil)
-
-				mk.On("Read", mock.Anything, mock.Anything).
-					Run(func(args mock.Arguments) {
-						in := args.Get(0).([]byte)
-						copy(in, sampleQAPayload)
-					}).
-					Return(9, nil)
-			},
-			checks: checkZH07qRead(
-				checkZH07qReadError(""),
-				checkZH07qReadValues(101.0, 133.0, 150.0),
-			),
-		},
 		{
 			name: "fail - write error",
 			before: func(z *ZH07q) {
@@ -247,6 +219,26 @@ func TestZH07q_Read(t *testing.T) {
 				checkZH07qReadError("checksum mismatch"),
 			),
 		},
+		{
+			name: "success",
+			before: func(z *ZH07q) {
+				mk := z.transport.(*mockTransportProvider)
+
+				mk.On("Write", mock.Anything).
+					Return(nil)
+
+				mk.On("Read", mock.Anything, mock.Anything).
+					Run(func(args mock.Arguments) {
+						in := args.Get(0).([]byte)
+						copy(in, sampleQAPayload)
+					}).
+					Return(9, nil)
+			},
+			checks: checkZH07qRead(
+				checkZH07qReadError(""),
+				checkReadValues(101.0, 133.0, 150.0),
+			),
+		},
 	}
 	for _, tt := range tests {
 		tt := tt
@@ -265,11 +257,9 @@ func TestZH07q_Read(t *testing.T) {
 
 // --------------- Run tests ---------------
 
-type checkZH07qRunFn func(*testing.T, *domain.ReadingEvent)
+var checkZH07qRun = func(fns ...checkReadFn) []checkReadFn { return fns }
 
-var checkZH07qRun = func(fns ...checkZH07qRunFn) []checkZH07qRunFn { return fns }
-
-func checkZH07qRunError(want string) checkZH07qRunFn {
+func checkZH07qRunError(want string) checkReadFn {
 	return func(t *testing.T, re *domain.ReadingEvent) {
 		t.Helper()
 		if want == "" && re.Err != nil {
@@ -284,19 +274,10 @@ func checkZH07qRunError(want string) checkZH07qRunFn {
 	}
 }
 
-func checkZH07qRunValues(pm1, pm25, pm10 float32) checkZH07qRunFn {
-	return func(t *testing.T, re *domain.ReadingEvent) {
-		t.Helper()
-		assert.Equalf(t, pm1, re.Reading.NumberPM1, "PM1 expected %.2f, got %.2f", pm1, re.Reading.NumberPM1)
-		assert.Equalf(t, pm25, re.Reading.NumberPM25, "PM25 expected %.2f, got %.2f", pm25, re.Reading.NumberPM25)
-		assert.Equalf(t, pm10, re.Reading.NumberPM10, "PM10 expected %.2f, got %.2f", pm10, re.Reading.NumberPM10)
-	}
-}
-
 func TestZH07q_Run(t *testing.T) {
 	tests := []struct {
 		name   string
-		checks []checkZH07qRunFn
+		checks []checkReadFn
 		before func(*ZH07q)
 		after  func(*ZH07q, context.CancelFunc)
 	}{
@@ -317,7 +298,7 @@ func TestZH07q_Run(t *testing.T) {
 			},
 			checks: checkZH07qRun(
 				checkZH07qRunError(""),
-				checkZH07qRunValues(101.0, 133.0, 150.0),
+				checkReadValues(101.0, 133.0, 150.0),
 			),
 		},
 		{
