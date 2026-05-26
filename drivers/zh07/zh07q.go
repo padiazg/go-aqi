@@ -33,13 +33,12 @@ func newZH07q(config *Config) *ZH07q {
 		config.Transport = serial.New(bufio.NewReadWriter(bufio.NewReader(bytes.NewReader([]byte{})), nil))
 	}
 
-	id := config.ID
-	if id == "" {
-		id = "zh07-q"
+	if config.ID == "" {
+		config.ID = "zh07-q"
 	}
 
 	return &ZH07q{
-		id:        id,
+		id:        config.ID,
 		transport: config.Transport,
 		data:      make([]byte, 9),
 		interval:  config.Interval,
@@ -140,7 +139,7 @@ func (z *ZH07q) getChecksum() int {
 	return int(z.data[8])
 }
 
-// getChecksum recovers the checksum from the payload.
+// calculateChecksum calculates the checksum from the payload.
 func (z *ZH07q) calculateChecksum() int {
 	var tempq byte
 	for _, v := range (z.data)[1 : len(z.data)-1] {

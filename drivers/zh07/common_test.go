@@ -3,12 +3,8 @@ package zh07
 import (
 	"testing"
 
-	"github.com/go-openapi/testify/v2/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/padiazg/go-aqi/domain"
-)
-
-const (
-	checksum = 0x0327
 )
 
 type checkFn func(t *testing.T, r *domain.ReadingEvent, err error)

@@ -3,7 +3,7 @@ package zh07
 import (
 	"testing"
 
-	"github.com/go-openapi/testify/v2/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/padiazg/go-aqi/domain"
 )
 

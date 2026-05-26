@@ -33,13 +33,12 @@ func newZH07i(config *Config) *ZH07i {
 		config.Transport = serial.New(bufio.NewReadWriter(bufio.NewReader(bytes.NewReader([]byte{})), nil))
 	}
 
-	id := config.ID
-	if id == "" {
-		id = "zh07-i"
+	if config.ID == "" {
+		config.ID = "zh07-i"
 	}
 
 	return &ZH07i{
-		id:        id,
+		id:        config.ID,
 		data:      make([]byte, 32),
 		transport: config.Transport,
 		interval:  config.Interval,

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/go-openapi/testify/v2/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/padiazg/go-aqi/domain"
 	"github.com/stretchr/testify/mock"
 )

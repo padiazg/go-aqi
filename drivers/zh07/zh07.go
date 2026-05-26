@@ -7,10 +7,13 @@ import (
 	"github.com/padiazg/go-aqi/domain"
 )
 
+// ModeType selects the ZH07 sensor communication mode.
 type ModeType int
 
 const (
+	// ModeInitiative drives the sensor in initiative upload mode (sensor pushes data without polling).
 	ModeInitiative ModeType = iota
+	// ModeQA drives the sensor in query-response mode (host polls sensor for data).
 	ModeQA
 )
 
