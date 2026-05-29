@@ -1,5 +1,6 @@
 package i2c
 
+// I2CBus defines the I2C bus operations for sensor communication.
 type I2CBus interface {
 	WriteBytes(buf []byte) (int, error)
 	ReadBytes(buf []byte) (int, error)

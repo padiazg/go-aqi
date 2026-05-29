@@ -7,43 +7,61 @@ import (
 	"fmt"
 	"time"
 
-	i2c "github.com/d2r2/go-i2c"
+	"github.com/d2r2/go-i2c"
 	"github.com/padiazg/go-aqi/domain"
 	"github.com/padiazg/go-aqi/internal/helpers"
-	i2ctransport "github.com/padiazg/go-aqi/internal/transport/i2c"
 )
 
 var _ domain.SensorProvider = (*SPS30)(nil)
 
-var ErrNotReady = errors.New("not ready")
+var (
+	ErrNotReady             = errors.New("not ready")
+	cmdStartMeasurement     = []byte{0x00, 0x10, 0x03, 0x00, 0xac}
+	cmdStopMeasurement      = []byte{0x01, 0x04}
+	cmdIsDataReady          = []byte{0x02, 0x02}
+	cmdReadMeasurement      = []byte{0x03, 0x00}
+	cmdReadArticle          = []byte{0xD0, 0x25}
+	cmdReadSerial           = []byte{0xD0, 0x33}
+	cmdReadCleaningInterval = []byte{0x80, 0x00}
+	cmdReset                = []byte{0xD3, 0x04}
+)
+
+// Config holds configuration options for sensor instances.
+type Config struct {
+	Transport domain.TransportProvider
+	Interval  time.Duration
+	ID        string
+}
 
 type SPS30 struct {
-	id        string
-	cancel    context.CancelFunc
-	transport domain.TransportProvider
-	interval  time.Duration
+	connection *i2c.I2C
+	cancel     context.CancelFunc
+	interval   time.Duration
+	transport  domain.TransportProvider
+	id         string
 }
 
 // New creates a new sensor object.
-func New(i2c *i2c.I2C, interval time.Duration, opts ...func(*SPS30)) *SPS30 {
-	s := &SPS30{
-		id:        "sps30",
-		transport: i2ctransport.New(i2c),
-		interval:  interval,
+func New(config *Config) (*SPS30, error) {
+	if config == nil {
+		config = &Config{}
 	}
-	for _, opt := range opts {
-		opt(s)
-	}
-	return s
-}
 
-// WithID sets the sensor ID used for the SensorID field on readings.
-func WithID(id string) func(*SPS30) {
-	return func(s *SPS30) {
-		if id != "" {
-			s.id = id
-		}
+	if config.Transport == nil {
+		return nil, fmt.Errorf("transport not provided")
 	}
+
+	if config.ID == "" {
+		config.ID = "sps30"
+	}
+
+	s := &SPS30{
+		id:        config.ID,
+		transport: config.Transport,
+		interval:  config.Interval,
+	}
+
+	return s, nil
 }
 
 // ---------------------------- Interface
@@ -135,7 +153,7 @@ func (s *SPS30) ReadArticleCode() (string, error) {
 	var code []byte
 	in := make([]byte, 47)
 
-	if err := s.readFromAddress([]byte{0xD0, 0x25}, in); err != nil {
+	if err := s.sendCommand(cmdReadArticle, in); err != nil {
 		return "", fmt.Errorf("ReadArticleCode: %w", err)
 	}
 
@@ -154,8 +172,8 @@ func (s *SPS30) ReadArticleCode() (string, error) {
 
 // ReadSerial reads sensor serial
 func (s *SPS30) ReadSerial() (string, error) {
-	in := make([]byte, 47)
-	err := s.readFromAddress([]byte{0xD0, 0x33}, in)
+	in := make([]byte, 32)
+	err := s.sendCommand(cmdReadSerial, in)
 	if err != nil {
 		return "", fmt.Errorf("ReadSerial: %w", err)
 	}
@@ -175,7 +193,7 @@ func (s *SPS30) ReadSerial() (string, error) {
 // ReadCleaningInterval reads cleaning interval from sensor
 func (s *SPS30) ReadCleaningInterval() (int64, error) {
 	in := make([]byte, 6)
-	if err := s.readFromAddress([]byte{0x80, 0x04}, in); err != nil {
+	if err := s.sendCommand(cmdReadCleaningInterval, in); err != nil {
 		return -1, fmt.Errorf("ReadCleaningInterval: %w", err)
 	}
 
@@ -184,7 +202,7 @@ func (s *SPS30) ReadCleaningInterval() (int64, error) {
 
 // StartMeasurement starts measurement
 func (s *SPS30) StartMeasurement() error {
-	err := s.transport.Write([]byte{0x00, 0x10, 0x03, 0x00, crc8Checksum([]byte{0x03, 0x00})})
+	err := s.transport.Write(cmdStartMeasurement)
 	if err != nil {
 		return fmt.Errorf("StartMeasurement: %w", err)
 	}
@@ -193,7 +211,7 @@ func (s *SPS30) StartMeasurement() error {
 
 // StopMeasurement stops measurements
 func (s *SPS30) StopMeasurement() error {
-	err := s.transport.Write([]byte{0x01, 0x04})
+	err := s.transport.Write(cmdStopMeasurement)
 	if err != nil {
 		return fmt.Errorf("StopMeasurement: %w", err)
 	}
@@ -203,7 +221,7 @@ func (s *SPS30) StopMeasurement() error {
 // Read reads measurements
 func (s *SPS30) ReadMeasurement() (*domain.AirQualityReading, error) {
 	in := make([]byte, 60)
-	if err := s.readFromAddress([]byte{0x03, 0x00}, in); err != nil {
+	if err := s.sendCommand(cmdReadMeasurement, in); err != nil {
 		return nil, fmt.Errorf("Read: %w", err)
 	}
 
@@ -224,9 +242,12 @@ func (s *SPS30) ReadMeasurement() (*domain.AirQualityReading, error) {
 }
 
 // IsDataReady checks if new measurements are ready to read.
+// ia-hint: in values are
+// []byte{0x00, 0x00, 0x81} = no new measurements available
+// []byte{0x00, 0x01, 0xb0} = new measurements ready to read
 func (s *SPS30) IsDataReady() (bool, error) {
 	in := make([]byte, 3)
-	if err := s.readFromAddress([]byte{0x02, 0x02}, in); err != nil {
+	if err := s.sendCommand(cmdIsDataReady, in); err != nil {
 		return false, err
 	}
 
@@ -235,7 +256,7 @@ func (s *SPS30) IsDataReady() (bool, error) {
 
 // Reset sends reset command
 func (s *SPS30) Reset() error {
-	err := s.transport.Write([]byte{0xD3, 0x04})
+	err := s.transport.Write(cmdReset)
 	if err != nil {
 		return fmt.Errorf("Reset: %w", err)
 	}
@@ -243,14 +264,14 @@ func (s *SPS30) Reset() error {
 	return nil
 }
 
-func (s *SPS30) readFromAddress(addr []byte, in []byte) error {
+func (s *SPS30) sendCommand(addr []byte, in []byte) error {
 	if err := s.transport.Write(addr); err != nil {
-		return fmt.Errorf("readFromAddress sending code %X: %w", addr, err)
+		return fmt.Errorf("sendCommand sending code %X: %w", addr, err)
 	}
 
 	_, err := s.transport.Read(in, false)
 	if err != nil {
-		return fmt.Errorf("readFromAddress reading response for %X: %w", addr, err)
+		return fmt.Errorf("sendCommand reading response for %X: %w", addr, err)
 	}
 
 	return nil
