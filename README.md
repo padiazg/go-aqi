@@ -106,3 +106,4 @@ for event := range sensor.Run(ctx) {
 ## License
 
 MIT License - see [LICENSE](LICENSE) file for details.
+.
