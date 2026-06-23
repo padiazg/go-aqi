@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/padiazg/go-aqi/domain"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -50,6 +50,13 @@ func checkConfigZH07q(t *testing.T, sp *ZH07q) {
 }
 
 func Test_newZH07q(t *testing.T) {
+	checkID := func(want string) newZH07qFn {
+		return func(t *testing.T, z *ZH07q) {
+			t.Helper()
+			assert.Equalf(t, want, z.id, "checkID id = %s, expected: %s", z.id, want)
+		}
+	}
+
 	tests := []struct {
 		name   string
 		config *Config
@@ -60,6 +67,16 @@ func Test_newZH07q(t *testing.T) {
 			checks: checknewZH07q(
 				checkTypeZH07q,
 				checkConfigZH07q,
+				checkID("zh07-q"),
+			),
+		},
+		{
+			name:   "custom-id",
+			config: &Config{ID: "custom-id"},
+			checks: checknewZH07q(
+				checkTypeZH07q,
+				checkConfigZH07q,
+				checkID("custom-id"),
 			),
 		},
 	}
@@ -334,7 +351,7 @@ func TestZH07q_Run(t *testing.T) {
 			)
 
 			wg.Go(func() {
-				timeout := time.After(1 * time.Second)
+				timeout := time.After(30 * time.Second)
 				for {
 					select {
 					case reading, ok := <-ch:

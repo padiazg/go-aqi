@@ -8,11 +8,11 @@ import (
 
 // RetryConfig controls the behavior of WithRetry.
 type RetryConfig struct {
-	Fn       func() error           // function to retry
-	CountAs  func(err error) bool   // nil means all errors count toward retry limit
-	Interval time.Duration          // 0 means no retry interval
-	Timeout  time.Duration          // 0 means no timeout (respects parent context)
-	Times    int                    // max retry attempts; 0 means unlimited
+	Fn       func() error         // function to retry
+	CountAs  func(err error) bool // nil means all errors count toward retry limit
+	Interval time.Duration        // 0 means no retry interval
+	Timeout  time.Duration        // 0 means no timeout (respects parent context)
+	Times    int                  // max retry attempts; 0 means unlimited
 }
 
 // WithRetry retries fn up to config.Times times with config.Interval between attempts.

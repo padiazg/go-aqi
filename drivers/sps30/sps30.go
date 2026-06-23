@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/d2r2/go-i2c"
 	"github.com/padiazg/go-aqi/domain"
 	"github.com/padiazg/go-aqi/internal/helpers"
 )
@@ -34,11 +33,10 @@ type Config struct {
 }
 
 type SPS30 struct {
-	connection *i2c.I2C
-	cancel     context.CancelFunc
-	interval   time.Duration
-	transport  domain.TransportProvider
-	id         string
+	cancel    context.CancelFunc
+	interval  time.Duration
+	transport domain.TransportProvider
+	id        string
 }
 
 // New creates a new sensor object.
@@ -71,6 +69,7 @@ func (s *SPS30) Init(ctx context.Context) error {
 	return nil
 }
 
+// Read performs a single measurement cycle: start measurement, poll for data-ready (with retry), read, stop.
 func (s *SPS30) Read(ctx context.Context) *domain.ReadingEvent {
 	var reading *domain.AirQualityReading
 
@@ -78,7 +77,9 @@ func (s *SPS30) Read(ctx context.Context) *domain.ReadingEvent {
 		return &domain.ReadingEvent{Err: err}
 	}
 
-	defer s.StopMeasurement()
+	defer func() {
+		_ = s.StopMeasurement()
+	}()
 
 	err := helpers.WithRetry(ctx, &helpers.RetryConfig{
 		Interval: 500 * time.Millisecond,
@@ -140,7 +141,7 @@ func (s *SPS30) Run(ctx context.Context) <-chan *domain.ReadingEvent {
 // Stop halts the sensor reading loop.
 func (s *SPS30) Stop() {
 	if s.cancel != nil {
-		s.StopMeasurement()
+		_ = s.StopMeasurement()
 		s.cancel()
 	}
 }

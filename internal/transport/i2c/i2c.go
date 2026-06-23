@@ -21,6 +21,7 @@ func New(i2c I2CBus) *I2CTransport {
 	}
 }
 
+// Read reads bytes from the I2C bus into the provided buffer.
 func (i *I2CTransport) Read(in []byte, _ bool) (int, error) {
 	count, err := i.i2c.ReadBytes(in)
 	if err != nil {

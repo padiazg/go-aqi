@@ -96,11 +96,11 @@ for event := range sensor.Run(ctx) {
 ├── drivers/         # Sensor driver implementations
 │   ├── zh07/        # ZH07B particulate matter sensor
 │   └── sps30/       # SPS30 laser scattering sensor
-├── transport/       # Communication transport abstractions
-│   ├── serial/      # UART serial transport
-│   └── i2c/         # I2C bus transport
-└── pkg/             # Shared utilities
-    └── helpers/     # Retry logic and common helpers
+├── internal/
+│   ├── transport/   # Communication transport abstractions
+│   │   ├── serial/  # UART serial transport
+│   │   └── i2c/     # I2C bus transport
+│   └── helpers/     # Retry logic and common helpers
 ```
 
 ## License
