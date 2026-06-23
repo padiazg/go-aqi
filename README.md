@@ -3,6 +3,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/padiazg/go-aqi.svg)](https://pkg.go.dev/github.com/padiazg/go-aqi)
 [![Go Report Card](https://goreportcard.com/badge/github.com/padiazg/go-aqi)](https://goreportcard.com/report/github.com/padiazg/go-aqi)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CRAP analysis](https://github.com/padiazg/go-aqi/actions/workflows/crap.yaml/badge.svg?branch=master)](https://github.com/padiazg/go-aqi/actions/workflows/crap.yaml)
 
 > **Status:** Pre-release / Work in progress
 
