@@ -11,7 +11,7 @@ type mockTransportProvider struct {
 
 func (m *mockTransportProvider) Read(in []byte, full bool) (int, error) {
 	args := m.Called(in, full)
-	r0 := args.Get(0).(int)
+	r0 := args.Int(0)
 	r1 := args.Error(1)
 	return r0, r1
 }

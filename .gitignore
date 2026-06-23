@@ -1,1 +1,16 @@
-.vscode
+go-aqi
+dist/
+*.out
+coverage.out
+mutation.json
+.vscode/
+.idea/
+.DS_Store
+doc/site/
+.claude/
+*.md
+!README.md
+!CHANGELOG.md
+!CODE_OF_CONDUCT.md
+!CONTRIBUTING.md
+!SECURITY.md

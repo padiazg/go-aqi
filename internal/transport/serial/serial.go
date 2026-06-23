@@ -34,5 +34,5 @@ func (s *SerialTransport) Write(out []byte) error {
 		return err
 	}
 
-	return s.rw.Writer.Flush() // flush write buffer
+	return s.rw.Flush() // flush write buffer
 }

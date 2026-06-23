@@ -52,7 +52,9 @@ var (
 	}
 )
 
-func newTransport(readBuf io.Reader, writeBuf io.Writer, prefillSize int) (*SerialTransport, io.Writer) {
+func newTransport(t *testing.T, readBuf io.Reader, writeBuf io.Writer, prefillSize int) (*SerialTransport, io.Writer) {
+	t.Helper()
+
 	if readBuf == nil {
 		readBuf = bytes.NewBuffer([]byte{})
 	}
@@ -65,7 +67,10 @@ func newTransport(readBuf io.Reader, writeBuf io.Writer, prefillSize int) (*Seri
 
 	if prefillSize > 0 {
 		bw = bufio.NewWriterSize(writeBuf, prefillSize)
-		bw.Write(make([]byte, prefillSize))
+		_, err := bw.Write(make([]byte, prefillSize))
+		if err != nil {
+			t.Fatal("Writting prefill")
+		}
 	} else {
 		bw = bufio.NewWriter(writeBuf)
 	}
@@ -122,7 +127,7 @@ func TestSerialTransport_Write(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			transport, writeBuf := newTransport(nil, tt.writeBuf, tt.prefillSize)
+			transport, writeBuf := newTransport(t, nil, tt.writeBuf, tt.prefillSize)
 			err := transport.Write(tt.out)
 
 			for _, c := range tt.checks {
@@ -187,7 +192,7 @@ func TestSerialTransport_Read(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			transport, _ := newTransport(tt.readBuf, nil, 0)
+			transport, _ := newTransport(t, tt.readBuf, nil, 0)
 
 			got := make([]byte, 3)
 			count, err := transport.Read(got, tt.full)

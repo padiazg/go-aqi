@@ -3,8 +3,8 @@ package zh07
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/padiazg/go-aqi/domain"
+	"github.com/stretchr/testify/assert"
 )
 
 type NewFn func(*testing.T, domain.SensorProvider, error)
