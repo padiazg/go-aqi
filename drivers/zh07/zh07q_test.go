@@ -3,7 +3,6 @@ package zh07
 import (
 	"context"
 	"fmt"
-	"sync"
 	"testing"
 	"time"
 
@@ -332,8 +331,6 @@ func TestZH07q_Run(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-
 			s := newZH07q(&Config{
 				Transport: new(mockTransportProvider),
 				Interval:  10 * time.Millisecond,
@@ -343,35 +340,39 @@ func TestZH07q_Run(t *testing.T) {
 				tt.before(s)
 			}
 
-			ch := s.Run(ctx)
+			ch := s.Run(context.Background())
 
-			var (
-				wg  sync.WaitGroup
-				got *domain.ReadingEvent
-			)
+			// Wait for exactly one reading from the Run loop, then stop
+			// immediately. This avoids the race where a second tick fires
+			// before s.Stop() cancels the context (which would cause an
+			// unexpected mock call when using .Once() expectations).
+			var got *domain.ReadingEvent
 
-			wg.Go(func() {
-				timeout := time.After(30 * time.Second)
-				for {
-					select {
-					case reading, ok := <-ch:
-						if !ok {
-							return // channel closed as expected
-						}
-						got = reading
-					case <-timeout:
-						cancel()
-						t.Fatal("timed out waiting for channel to close")
+			select {
+			case reading, ok := <-ch:
+				if !ok {
+					t.Fatal("channel closed unexpectedly")
+				}
+				got = reading
+			case <-time.After(30 * time.Second):
+				t.Fatal("timed out waiting for first reading")
+			}
+
+			s.Stop()
+
+			// Confirm the Run goroutine exited by waiting for the channel
+			// to close. If the channel is still open, drain leftover
+			// events to unblock any concurrent sends before the test
+			// finishes.
+			select {
+			case _, ok := <-ch:
+				if ok {
+					for range ch {
 					}
 				}
-			})
-
-			go func() {
-				time.Sleep(20 * time.Millisecond)
-				s.Stop()
-			}()
-
-			wg.Wait()
+			case <-time.After(5 * time.Second):
+				t.Fatal("timed out waiting for channel to close")
+			}
 
 			for _, c := range tt.checks {
 				c(t, got)
