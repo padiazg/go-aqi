@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	github.com/d2r2/go-i2c v0.0.0-20191123181816-73a8a799d6bc
-	github.com/go-openapi/testify/v2 v2.5.1
+	github.com/go-openapi/testify/v2 v2.7.0
 	github.com/sigurn/crc8 v0.0.0-20220107193325-2243fe600f9f
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/goleak v1.3.0
